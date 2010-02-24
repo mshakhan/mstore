@@ -9,9 +9,9 @@
   action del   { parser -> command = MST_PC_DEL; pk = p; }
   
   action skey  { parser -> key = (char*)p; }
-  action ekey  { parser -> key_len = p - pk - 1; }
+  action ekey  { parser -> key_len = p - pk - 1; printf("kl: %d", (p - pk - 1)); }
   
-  action done  { parser -> data = (char*)(p + 1); parser -> data_len = pe - p - 1; }
+  action done  { printf("done\n"); parser -> data = (char*)(p + 1); parser -> data_len = pe - p - 1; }
   
   nl     = "\n" | ";";
   ws     = " ";

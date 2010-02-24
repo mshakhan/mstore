@@ -76,21 +76,41 @@ int mst_server_callback(int client) {
   
   if (bytes_recv > 0) {
     mst_parser_t* parser = mst_parser_create();
-    mst_parser_exec(parser, mst_recv_buffer, bytes_recv);
+    mst_parser_exec(parser, mst_recv_buffer, bytes_recv - 1);
+    
+    INFO("Recv %d bytes:\n===\n%s\n===\n", bytes_recv, mst_recv_buffer);
+    char* key = NULL;
+    char* data = NULL;
     
     switch (parser -> command) {
     case MST_PC_GET:
-      INFO("GET");
+      key = malloc(parser -> key_len + 1);
+      memcpy(key, parser -> key, parser -> key_len);
+      key[parser -> key_len] = '\0';
+      data = mst_storage_get(storage, key);
+      send(client, data, strlen(data), 0);
+      INFO("GET: key = %s, data = %s", key, data);
       break;
     case MST_PC_PUT:
-      INFO("PUT");
+      key = malloc(parser -> key_len + 1);
+      data = malloc(parser -> data_len + 1);
+      memcpy(key, parser -> key, parser -> key_len);
+      key[parser -> key_len] = '\0';
+      memcpy(data, parser -> data, parser -> data_len);
+      data[parser -> data_len] = '\0';
+      mst_storage_set(storage, key, data);
+      INFO("PUT: key = %s : %d, data = %s : %d", 
+        parser -> key, parser -> key_len, parser -> data, parser -> data_len);
       break;
     case MST_PC_DEL:
-      INFO("DEL");
+      INFO("DEL requests are not implemented");
       break;
     default:
       ERROR("Invalid command");
-    }    
+    }
+    
+    if (key) { free(key); }
+    if (data) { free(data); }    
         
     mst_parser_destroy(parser);
   } 
