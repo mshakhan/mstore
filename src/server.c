@@ -105,12 +105,14 @@ int mst_server_dispatch(mst_server_t* mst_server) {
       their_addr.ss_family, mst_server_get_in_addr((struct sockaddr *)&their_addr), s, sizeof(s));
     INFO("Got connection from %s", s);
 
-    if (!fork()) {		            // this is the child process
-      close(mst_server -> fd);	  // child doesn't need the listener
+    if (!fork()) {		            
+      close(mst_server -> fd);	  
       mst_server -> callback(client_fd);
+      INFO("Connection with %s closed", s);
+      close(client_fd);      
       exit(EXIT_SUCCESS);
     }
-    close(client_fd);		          // parent doesn't need this    
+    close(client_fd);    
   }
 }
 

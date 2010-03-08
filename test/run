@@ -1,3 +1,17 @@
 #!/usr/bin/ruby
+$LOAD_PATH << File.expand_path(File.dirname(__FILE__))
 
-# TODO =)
+require 'client'
+
+if ARGV.size >= 1
+  client = Mstore::Client.new ARGV.first.to_i
+  ret = client.put("KEY1", "VALUE1")
+  puts "put returned: #{ret}"
+  ret = client.get("KEY1")
+  puts "get returned #{ret}"
+else
+  puts "Invalid args"  
+end
+
+
+

@@ -9,9 +9,9 @@
   action del   { parser -> command = MST_PC_DEL; pk = p; }
   
   action skey  { parser -> key = (char*)p; }
-  action ekey  { parser -> key_len = p - pk - 1; printf("kl: %d", (p - pk - 1)); }
+  action ekey  { parser -> key_len = p - pk - 1;}
   
-  action done  { printf("done\n"); parser -> data = (char*)(p + 1); parser -> data_len = pe - p - 1; }
+  action done  { parser -> data = (char*)(p + 1); parser -> data_len = pe - p - 1; }
   
   nl     = "\n" | ";";
   ws     = " ";
@@ -48,8 +48,11 @@ mst_parser_t* mst_parser_create() {
   return parser;
 }
 
-void mst_parser_destroy(mst_parser_t* parser) {
-  free(parser);
+void mst_parser_destroy(mst_parser_t** parser) {
+  if (NULL != *parser) {
+    free(*parser);
+    *parser = NULL; 
+  }
 }
 
 void mst_parser_exec(mst_parser_t* parser, char* request, int size) {
@@ -64,3 +67,32 @@ void mst_parser_exec(mst_parser_t* parser, char* request, int size) {
   
   parser -> cs = cs;    
 }
+
+#ifdef MST_DEBUG
+void mst_parser_dump(mst_parser_t* parser) {
+  printf("Command: ");
+  
+  char* commands[] = {
+    "NONE", "PUT", "GET", "DEL"
+  };
+  printf("%s\n", commands[parser -> command]);
+  
+  printf("Key len: %d\n", parser -> key_len);
+  printf("Key: ");
+  
+  int i;
+  for (i = 0; i < parser -> key_len; i++) {
+    printf("%c", parser -> key[i]);
+  }
+  printf("\n");
+
+  printf("Data len: %d\n", parser -> data_len);
+  printf("Data: ");
+  
+  for (i = 0; i < parser -> data_len; i++) {
+    printf("%c", parser -> data[i]);
+  }
+  printf("\n");  
+}
+#endif
+

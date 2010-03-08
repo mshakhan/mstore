@@ -70,50 +70,68 @@ void mst_print_usage() {
   printf("mstore - Memory Storage\n\n\tUsage: mstore <port number>\n");
 }
 
-int mst_server_callback(int client) {
-  memset(mst_recv_buffer, 0, MST_RECV_BUFFER_LEN);
-  int bytes_recv = recv(client, mst_recv_buffer, MST_RECV_BUFFER_LEN, 0);
+void mst_command_put(int client, mst_parser_t* parser) {
+  char* key = malloc(parser -> key_len + 1);
+  char* data = malloc(parser -> data_len + 1);
   
-  if (bytes_recv > 0) {
-    mst_parser_t* parser = mst_parser_create();
-    mst_parser_exec(parser, mst_recv_buffer, bytes_recv - 1);
+  memcpy(key, parser -> key, parser -> key_len);
+  key[parser -> key_len] = '\0';
+
+  memcpy(data, parser -> data, parser -> data_len);
+  data[parser -> data_len] = '\0';
+  
+  mst_storage_set(storage, key, data);
+  send(client, "OK", 2, 0);
+}
+
+void mst_command_get(int client, mst_parser_t* parser) {
+  char* key = malloc(parser -> key_len + 1);
+  
+  memcpy(key, parser -> key, parser -> key_len);
+  key[parser -> key_len] = '\0';
+
+  
+  char* data = mst_storage_get(storage, key);
+  send(client, data, strlen(data), 0);  
+}
+
+void mst_command_none(int client, mst_parser_t* parser) {
+  send(client, "ERROR", 5, 0);
+}
+
+int mst_server_callback(int client) {
+  mst_parser_t* parser; 
+  for (;;) {
+    memset(mst_recv_buffer, 0, MST_RECV_BUFFER_LEN);
+    int bytes_recv = recv(client, mst_recv_buffer, MST_RECV_BUFFER_LEN, 0);
     
-    INFO("Recv %d bytes:\n===\n%s\n===\n", bytes_recv, mst_recv_buffer);
-    char* key = NULL;
-    char* data = NULL;
-    
-    switch (parser -> command) {
-    case MST_PC_GET:
-      key = malloc(parser -> key_len + 1);
-      memcpy(key, parser -> key, parser -> key_len);
-      key[parser -> key_len] = '\0';
-      data = mst_storage_get(storage, key);
-      send(client, data, strlen(data), 0);
-      INFO("GET: key = %s, data = %s", key, data);
+    if (bytes_recv > 0) {
+      parser = mst_parser_create(); 
+      mst_parser_exec(parser, mst_recv_buffer, bytes_recv);
+#ifdef MST_DEBUG
+      mst_parser_dump(parser);
+#endif
+      switch (parser -> command) {
+        case MST_PC_PUT:
+          mst_command_put(client, parser);
+        break;
+
+        case MST_PC_GET:
+          mst_command_get(client, parser);
+        break;
+
+        case MST_PC_DEL:
+          mst_command_none(client, parser);
+        break;
+
+        default:
+          mst_command_none(client, parser);
+        break;
+      }
+      mst_parser_destroy(&parser);
+    } else {
       break;
-    case MST_PC_PUT:
-      key = malloc(parser -> key_len + 1);
-      data = malloc(parser -> data_len + 1);
-      memcpy(key, parser -> key, parser -> key_len);
-      key[parser -> key_len] = '\0';
-      memcpy(data, parser -> data, parser -> data_len);
-      data[parser -> data_len] = '\0';
-      mst_storage_set(storage, key, data);
-      INFO("PUT: key = %s : %d, data = %s : %d", 
-        parser -> key, parser -> key_len, parser -> data, parser -> data_len);
-      break;
-    case MST_PC_DEL:
-      INFO("DEL requests are not implemented");
-      break;
-    default:
-      ERROR("Invalid command");
-    }
-    
-    if (key) { free(key); }
-    if (data) { free(data); }    
-        
-    mst_parser_destroy(parser);
-  } 
-     
+    }    
+  }     
   return 0;
 }

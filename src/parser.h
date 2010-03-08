@@ -16,7 +16,7 @@ typedef struct mst_parser {
 } mst_parser_t;
 
 mst_parser_t* mst_parser_create();
-void mst_parser_destroy(mst_parser_t* parser);
+void mst_parser_destroy(mst_parser_t** parser);
 void mst_parser_exec(mst_parser_t* parser, char* request, int size);
 
 #endif
